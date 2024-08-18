@@ -1,0 +1,1 @@
+curl -s https://raw.githubusercontent.com/dariomalchiodi/superhero-datascience/master/content/data/heroes.csv | grep -o '^[^;]*;[^;]*' | grep -o '[^;]*$' | grep -i '[^identity]' | tr '[:upper:]' '[:lower:]' | tr -d ' ' | grep -v '^$'
