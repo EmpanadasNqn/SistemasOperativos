@@ -1,4 +1,4 @@
-# Proyecto de SHELL "MyBash" en C
+# Lab 1: Proyecto de SHELL "MyBash" en C
 
 Este proyecto implementa un shell básico en C llamado `mybash`, que incluye la capacidad de manejar pipelines y redirección de entrada/salida.
 

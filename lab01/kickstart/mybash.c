@@ -12,7 +12,6 @@
 
 #include "obfuscated.h"
 
-
 static void show_prompt(void) {
     char cwd[1024];
 
