@@ -1,0 +1,3 @@
+# Laboratorio 0 de Sistemas Operativos
+
+Programas basicos de la Shell...
