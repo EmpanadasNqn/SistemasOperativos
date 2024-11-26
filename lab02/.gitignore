@@ -1,0 +1,5 @@
+__pycache__/
+xv6.out
+xv6.out.pingpong_order
+xv6.out.pingpong_concurrency
+.vscode/
