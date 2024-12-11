@@ -1,0 +1,125 @@
+2^0  ~ byte
+2^10 ~ KiB
+2^20 ~ MiB
+2^30 ~ GiB
+2^40 ~ TiB
+
+PFN = Physical Frame Number = Numero de Marco Fisico
+PTE = Page Table Entry = Entrada de la Page Table
+PDE = Page Directory Entry = Entrada del Directorio de la Pagina
+
+El registro CR3 apunta a la base de la page table.
+Por lo que, por ejemplo, se usa en el caso de querer hacer un cambio de esquema
+de memoria virtual de un proceso a otro desde el sistema operativo. Simplemente
+cambiar CR3 a la base de la page table del otro proceso.
+
+Entonces si tenemos un address space de 32bits, podemos direccionar
+2^32bits, que es 2^2 * 2^30 = 4GiB.
+Si suponemos que tenemos pages de 4kiB, si suponemos que tenemos un esquema de
+memoria de un solo nivel (Paginación Lineal).
+
+Definimos CR3 como la base de la tabla de la pagina que va a contener la tabla 
+de paginas. Entonces va a decir cual es la pagina fisica que contiene la tabla
+de paginas.
+
+Sea CR3 = 0x1FAFA, tiene 20bits que son el inicio de la page table. Por lo que
+tenemos la siguiente tabla en la direccion CR3:
+
+0x1FAFA
+---
+PTE;	 PFN;     P Bit; RWX
+0:       0xFC0CA  1 	 101
+1:		 0xAC01A  1		 000
+2:		 0xFC0CA  1		 111
+3:		 0xA05AD  0		 000
+4:		 0xFDEAD  1		 111
+
+Ejercicios:
+Traducir de Virtual a Fisica
+1. 	0x00001FFF: 0xAC01AFFF
+   	Tenemos que 0x00001 = 0x1 es la PTE y 0xFFF el offset.
+	Como nuestra pagina 1 tiene el bit de presente, tenemos que el PFN es 
+	valido. 
+	Entonces la direccion de memoria fisica es la PFN concat con offset
+	quedando 0xAC01AFFF como la direccion traducida a fisica.
+	Notar que esta direccion fisica esta presente pero no se puede leer, ni
+	escribir, ni ejecutar.
+
+2. 	0x00000AAA: 0xFC0CAAAA
+	0x0 PTE y 0xAAA offset, se puede leer y ejecutar.
+
+3. 	0x00040FE0 
+	0x40 PTE no existe.
+
+4. 	0x0000DEAF
+	0xD PTE no existe.
+
+5. 	0x00000AAB: 0xFC0CAAAB
+	0x0 PTE y 0xAAB offset, se puede leer y ejecutar.
+
+6.	0x00003FFF
+	0x4 PTE y 0xFFF offset, pero no esta presente por lo que hay una
+	Page Fault.
+
+7. 	0x00002000: FC0CA000
+	Se puede leer, escribir y ejecutar.
+
+8.	0x00000000: FC0CA000
+	Se puede leer y ejecutar pero no escribir.
+	Estas dos direcciones virtuales tienen la misma direccion fisica. No genera
+	ningun conflico, se usa para ahorrar memoria.
+
+Traducir de Fisica a Virtual
+1.	0xA05AD444: 0x00003444
+
+2.	0xFC0CA111: 0x00000111 ó 0x00002111
+
+3.	0xFC0CA222: 0x00000222 ó 0x00002222
+
+4.	0xC0C0C0C0 No existe, no hay ninguna PTE 0xC0C0C
+
+
+Ahora veamos un esquema de memoria multi nivel. Especificamente de dos niveles
+Especificamente un esquema (10,10,12)
+
+Sea CR3 = 0x01000, con sus 20bits
+
+0x01000				 | 0x00001			    | 0x00002
+   0: 0x00001, 1, 111|    0: 0xFAFAF, 1, 111|	 0: 0x11111, 1, 111  
+   1: 0x00002, 1, 111|	  1: 0xC0CC0, 1, 111|	 1: 0x11111, 1, 111
+   2: 0x00001, 1, 111|	  2: 0xF0F0F, 1, 111|	 2: 0x11111, 1, 111
+   3: 0x00000, 0, 111|	...					|  ...
+ ...				 |  ...				    |  ...
+ 3FE:				 |  3FE:		 	    |  3FE: 0x11111, 1, 111
+ 3FF: 0x01000, 1, 111|  3FF: 0xE0E0E, 1, 111|  3FF: 0x11111, 1, 111
+
+Traducir de Virtual a Fisica
+1. 	0x00000000: 0xFAFAF000
+	Se tiene que dividir en tres campos, indxPGDIR = 0x0,
+	indxPGTABL = 0x0 y offset = 0x0. 
+	Notar que son 10bits de PDE, 10bits de PTE, y 12bits de offset. 
+	De estos bits se deduce tambien el tamaño de las pages, pages tables, 
+	pages directorys, etc. En este caso es una Page Directory de 2^10 = 1KiB 
+	pages cada una del tamaño del offset que es 2^12 = 4KiB. 
+	Lo mismo el tamaño de la page table que es 2^10 = 1KiB de pages de 4KiB 
+	cada una.
+
+	Entonces seguimos el camino desde el CR3 que su page directory 0x0 nos 
+	lleva a la page table 0x00001, que su pagina 0x0 nos deja en la memoria 
+	fisica 0xFAFAF000. El "camino" que se sigue se le dice page walk
+	
+2.	0x00000FFF: 0xFAFAFFFF
+	indxPGDIR = 0x0, indxPGTABL = 0x0, offset = 0xFFF
+
+3.	0x00002FFF: 0xF0F0FFFF
+	indxPGDIR = 0x0, indxPGTABL = 0x2, offset = 0xFFF
+
+4. 	0x00001FAA: 0xC0CC0FAA
+	indxPGDIR = 0x0, indxPGTABL = 0x1, offset = 0xFAA
+
+5.	0x00802AAA: 0xF0F0FAAA
+	indxPGDIR = 0x2, indxPGTABL = 0x2, offset = 0xAAA
+
+6.	0xFF000000: No esta mapeada, present bit = 0, page fault.
+	indxPGDIR = 0x3FC, indxPGTABL = 0x0, offset = 0x0
+

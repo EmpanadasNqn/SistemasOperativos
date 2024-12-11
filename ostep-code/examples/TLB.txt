@@ -1,0 +1,33 @@
+Codigo con numero Memoria Virtual
+
+200:	c7 00 00 00 00 00       movl   $0x0,(%rax)
+206:	48 83 c0 04             add    $0x4,%rax
+210:	48 39 d0                cmp    %rdx,%rax
+213:	75 f1                   jne    200
+
+Recorrido de Memoria Virtual
+Instruction Fetch: I
+Store: S
+
+I:	200 
+S:	1024+0x0
+I:	206
+I:	210
+I:	213
+I:	200
+S:	1024+0x4
+I:	206
+I:	210
+I:	213
+I:	200
+S:	1024+0x8
+...
+
+La localidad espacial es si se accedio a un elemento de memoria, muy probablemente
+se acceda a los elementos de memoria cercanos.
+
+La localidad temporal es si se accedio a un elemento de memoria, muy probablemente
+se acceda nuevamente a ellos en un tiempo cercano.
+
+Tener muy buena localidad temporal y espacial hace que no se acceda tanto a la
+page table, lo que significa que no se generen tantas TLB MISS's.
