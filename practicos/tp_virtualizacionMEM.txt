@@ -1,0 +1,332 @@
+1)	N: 		Program Code
+	a: 		Program Code, Porque es una variable global
+	a[N]: 	Program Code, porque es una variable global
+	argc: 	Stack
+	argv:	Stack
+	argv*:	Puntero a Heap
+	argv**: Puntero a Heap
+	i:		Stack
+	s:		Los registros no se encuentran en la memoria
+	b:		Stack
+	b*:		Puntero a Heap
+	ret s:	stack
+	
+2)	a)	El manual pide explicitamente nunca usar esta función gets(), por lo 
+		que	usarla es el mal uso de memoria.
+	b)	Esta mal allocated la memoria de *d, le falta un byte mas para 
+		almacenar la terminación del string '\0'.
+	c)	strdup() reserva la memoria, no es necesario reservarla de antemano.
+	d)	sizeof(a) = 16bytes y sizeof(int) = 4bytes por lo que al intentar
+		almacenar el 42 (int) en el ultimo byte del arreglo, le faltan 3bytes 
+		para poder guardarlo.
+
+3)	a)	Falso, es una función del user space que usa syscalls en su
+		implementación.
+	b)	Falso, un contraejemplo es al realizar un malloc(a), hacerle free y 
+		hacer otro malloc(a) pidiendo la misma cantidad de bytes.
+	c) 	Verdadero, al pedir memoria usa la syscall brk()/sbrk().
+	d)	Verdadero, tambien usa la syscall brk()/sbrk().
+	e)	Falso, no siempre lo es, como con el mismo ejemplo de b).
+
+4)	Registros base = 4096 y bounds = 256 -> bounds = 4096+256 = 4352
+	4096,
+	4096+5,  128
+	4096+8,
+	4096+10, 256
+	4096+13,
+
+5)	Si se le asignan 20bytes a un proceso que usa solo 16bytes, los 4bytes
+	restantes son fragmentación interna.
+
+	Si hay [P1|FREE|P2|FREE] donde el primer bloque FREE es de 5bytes y el
+	segundo de 10Bytes, sumando un total de 15bytes disponibles, si un
+	proceso pide 15bytes no se le podran asignar ya que hay una 
+	fragmentación externa.
+
+6)	La diferencia es que la relocalización dinámica usando los registros
+	(base,bounds) cada proceso se escribe y compila pensando que esta
+	cargado en la dirección cero. Basicamente usa el hardware (registros)
+	para obtener la dirección fisica.
+	En cambio en la relocalización estática se usa el software para obtener
+	la dirección fisica del proceso, Perdiendo protección.
+
+7)	a)	Verdadero, de no serlo los procesos podrian modificar su espacio.
+	b)	Falso, hay un juego de registros (base,bounds) por cada cpu.
+
+8)	Al ser 64KiB de Paginas de 4KiB, hay 64KiB\4KiB = 16 Paginas disponibles
+	por proceso.
+	
+	Un proceso tiene 32KiB de segmento de codigo, 16386Bytes de segmento
+	monticulo y 15870Bytes de segmento pila.
+	Por lo que su codigo, 32KiB\4KiB = 8 Paginas, entra en 8 paginas.
+	Su heap, 16386Bytes\4096Bytes = 4,0004... Paginas, entonces usa
+	5 paginas.
+	Su stack, 15870Bytes\4096Bytes = 3,8745... Paginas, entonces usa
+	4 paginas.
+
+	8+5+4 = 17, por lo que se necesitarian 17 paginas, pero solo se le dan
+	16 a cada proceso. No entraria en el espacio de direcciones.
+
+	Pero si las paginas fueran de 512Bytes, tendria 64KiB\512Bytes = 128
+	Paginas.
+	Su codigo ocuparia 32KiB\512Bytes = 64 paginas.
+	Su heap ocuparia 16386Bytes\512Bytes = 32,0039... entonces 33 Paginas.
+	Su stack ocuparia 15870Bytes\512Bytes = 30,99... entonces 31 Paginas.
+
+	64+33+31 = 128, por lo que entraria exacto en las 128 paginas de 512
+	Bytes.
+
+9)	[10KiB|4KiB|20KiB|18KiB|7KiB|9KiB|12KiB|15KiB] Para la secuencia de
+	memorias 12KiB, 10KiB y 9KiB.
+
+	a)	FirstFit le daria el bloque de 20KiB al de 12KiB, el de 10KiB al
+		de 10KiB y el de 18KiB al de 9KiB
+	b)	BestFit le daria el de 12KiB al de 12KiB, el de 10KiB al de 10KiB
+		y el de 9KiB al de 9KiB.
+	c)	WorstFit le daria el de 20KiB al de 12KiB, el de 18KiB al de 10KiB
+		y el de 15KiB al de 9KiB.
+	d)	NextFit le daria el de 20KiB al de 12KiB, el de 18KiB al de 10KiB
+		y el de 9KiB al de 9KiB.
+
+10)	La Translation-Lookaside Buffer ó TLB de una computadora tiene una
+	eficiencia del 95%. Obtener un valor de la TLB toma 10ns y desde la memoria
+	principal toma 120ns. 
+
+	tenemos que 0,95*(10ns+120ns) = 123,5ns es el tiempo promedio que le lleva
+	completar una operación cuando hay un TLB Hit.
+
+	0,05*(10ns+120ns+120ns) = 12,5ns es el tiempo promedio que le lleva
+	completar una operación cuando hay un TLB Miss.
+
+	Por lo que el tiempo promedio para completar una operación es de
+	123,5ns+12,5ns = 136ns.
+
+11)	a)	Sucede un TLB Miss cuando N<M ya que solo se ejecuta un ciclo del loop,
+		que es cuando i = 0, al ser la primera vez que se accede al arreglo.
+
+		Como tenemos paginas de 4KiB y los int ocupan 4Bytes, se pueden 
+		almacenar 1024 int's por pagina. Por lo que otro caso seria cuando M<=N
+		pero M es multiplo de 1024. ej: M = j*1024 con j un natural. Por lo que
+		en cada iteración se accederia a otra pagina, generando un TLB Miss.
+
+	b)	Al tener 64 entradas, se puede llegar a dar el caso si es que
+		N<1024*64, de que esten cargadas en el TLB todos los elementos del
+		arreglo. Por lo que todos serian TLB Hits.
+
+12)	a)	Tenemos 2^4 = 16bits de Virtual Page Number y 2^12 bits del tamaño de
+		paginas, hay 2^4*2^12 = 2^16 bits de direccionamiento en cada espacio.
+
+	b)	Virtual a Fisica:
+
+	*	(39424)dec = (1001 1010 0000 0000)bin
+	Entonces VPN = (1001)bin = (9)dec que es valida y offset = 1010 0000 0000
+	Por lo que la PFN = 0110 1010 0000 0000
+	
+	*	(12416)dec = (0011 0000 1000 0000)bin
+	Entonces VPN = (0011)bin = (3)dec que es valida y offset = 0000 1000 0000
+	Por lo que la PFN = 0101 0000 1000 0000
+
+	*	(26112)dec = (0110 0110 0000 0000)bin
+	Entonces VPN = (0110)bin = (6)dec No es direccion Valida. Por lo que no
+	tiene direccion fisica.
+
+	*	(63008)dec = (1111 0110 0010 0000)bin
+	Entonces VPN = (1111)bin = (15)dec que es valida y offset = 0110 0010 0000
+	Por lo que la PFN = 0010 0110 0010 0000
+
+	*	(21760)dec = (0101 0101 0000 0000)bin
+	Entonces VPN = (0101)bin = (5)dec que es valida y offset = 0101 0000 0000
+	Por lo que la PFN = 0001 0101 0000 0000
+
+	*	(32512)dec = (0111 1111 0000 0000)bin
+	Entonces VPN = (0111)bin = (7)dec No es direccion Valida. Por lo que no
+	tiene direccion fisica.
+
+	*	(43008)dec = (1010 1000 0000 0000)bin
+	Entonces VPN = (1010)bin = (10)dec que es valida y offset = 1000 0000 0000
+	Por lo que la PFN = 0100 1000 0000 0000
+
+	*	(36096)dec = (1000 1101 0000 0000)bin
+	Entonces VPN = (1000)bin = (8)dec que es valida y offset = 1101 0000 0000
+	Por lo que la PFN = 0011 1101 0000 0000
+
+	* 	(7424)dec = (0001 1101 0000 0000)bin
+	Entonces VPN = (0001)bin = (1)dec que es valida y offset = 1101 0000 0000
+	Por lo que la PFN = 0111 1101 0000 0000
+
+	*	(4032)dec = (0000 1111 1100 0000)bin
+	Entonces VPN = (0000)bin = (0)dec que es valida y offset = 1111 1100 0000
+	Por lo que la PFN = 0000 1111 1100 0000
+
+	c)	Fisica a Virtual:
+
+	*	(16385)dec = (0100 0000 0000 0001)bin
+	Entonces PFN = 0100 y offset = 0000 0000 0001
+	Por lo que la VPN = (4)dec ó (10)dec = (0100)bin ó (1010)bin
+	Entonces la direccion virtual es 0100 0000 0000 0001 ó 1010 0000 0000 0001
+
+	*	(4321)dec = (0001 0000 1110 0001)bin
+	Entonces PFN = 0001 y offset = 0000 1110 0001
+	Por lo que la VPN = (5)dec = (0101)bin
+	Entonces la direccion virtual es 0101 0000 1110 0001
+
+13)	Esquema de paginación i386 (10,10,12) traducir de Virtual a Fisica:
+	
+	*	0x003FF666 = (0000 0000 0011 1111 1111 0110 0110 0110)bin
+	Entonces PDI = 0000 0000 00 = 0x0, PTE = 11 1111 1111 = 0x3FF,
+	Offset = 0x666
+
+	PhysicalAddress = 0xCAEEA666
+
+	*	0x00000AB0 = (0000 0000 0000 0000 0000 1010 1011 0000)bin
+	Entonces PDI = 0x0, PTE = 0x0, Offset = 0xAB0
+
+	PA = 0xCAFECAB0
+
+	*	0x00800B0B = (0000 0000 1000 0000 0000 1011 0000 1011)bin
+	Entonces PDI = 0x2, PTE = 0x0, Offset = 0xB0B
+	
+	PA = 0x{No tiene nada definido}B0B
+
+14)	Esquema de paginación i386 (10,10,12),
+	
+	a)	Tenemos un offset de 2^12 = 4KiB, que es el tamaño de cada pagina.
+		Queremos mapear 32MiB = 2^20 * 2^5 = 2^25.
+		Necesitamos 2^25 / 2^12 = 2^(25-12) = 2^13 = 8192 Paginas.
+		Por cada tabla tenemos 2^10 = 1024 Paginas.
+		Entonces necesitamos 2^13 / 2^10 = 2^(13-10) = 2^3 = 8 Tablas.
+		Finalmente PageDirectoryIndex + #deTablas * PageDirectoryEntry =>
+		4Kib + 8 * 4KiB = 36KiB es el tamaño total necesario para mapeara 32MiB
+
+	b)	Queremos mapear 4GiB = 2^30 * 2^2 = 2^32.
+		Necesitamos 2^32 / 2^12 = 2^(32-12) = 2^20 = 1048576 Paginas.
+		Entonces necesitamos 2^20 / 2^10 = 2^10 = 1024 Tablas.
+		Finalmente 4KiB + 1024 * 4KiB = 4100KiB es el tamaño necesario para
+		mapear 4GiB.
+
+	c)	De ser una tabla de un solo nivel, ocuparia 1024 * 4KiB = 4096KiB.
+		
+	d)	?
+
+15)	Un i386 tiene 2^32 = 4GiB de direccionamiento virtual maximo. 
+	Y como parte de esos 4GiB esta reservado para el sistema operativo, 
+	no se puede mapear exactamente todos los 4GiB completos de memoria virtual.
+	El máximo espacio de direcciones accesible para un proceso es de 2 GiB 
+	en una configuración estándar. Usualmente, el espacio del kernel ocupa la 
+	mitad superior del rango.
+
+16)	Podriamos extender a 36bits de direccionamiento de memoria virtual porque
+	2^36 = 64GiB, usando un esquema (4,10,10,12) que serian 4bits que apuntan a
+	16 PageDirectory que este tendria 1024 tablas, y cada tabla tendria 1024
+	Paginas de 2^12 = 4KiB por el offset de 12 bits.
+
+17)	a)	Verdadero, cada proceso tiene su page table para su virtual address.
+	b)	Falso, se puede dar el caso donde la VM = PM. Ya que VM>=PM.
+	c) 	Falso, de haber un TLB Miss se busca en la pagetable, la entrega la MMU
+	d)	Verdadero, se pueden mapear dos o mas direcciones fisicas a una misma
+		direccion virtual.
+	e)	Falso, se puede mapear pero generaria problemas al intentar obtener la
+		direccion.
+	f)	Verdadero, por la VM se tiene 2^32 que en realidad no son reales.
+	g)	Verdadero, esto gracias a mecanismos como la paginacion.
+	h)	Falso, la idea de usar memoria virtual es en parte evitar que este toda
+		mapeada a la fisica.
+	i)	Faslo, cada proceso tiene su propio PD, PTE, etc. Cada proceso tiene su
+		propia memoria virtual.
+	j)	Verdadero, puede no estar mapeado.
+	k)	Falso, por tecnicas como copy-on-write no se copia toda la memoria.
+	l)	Verdadero, existen formas de acceder sin pasar por la MMU.
+	m)	Falso.
+	n)	Verdadero, de ser un SO extremadamente pequeño casi que se considere 
+		una libreria.
+
+18)	Un page directory donde su ultima entrada (1023) apunta a la base del mismo
+	y suponemos que es un esquema (10,10,12)
+	
+	a)	0xFFC00000 = 1111 1111 1100 0000 0000 0000 0000 0000, por lo que
+		PDI = 0x3FF = (1023)dec , PTE = 0x0, offset = 0x0.
+		Entonces la direccion fisica es la base de la page table. la direccion
+		0x00000000.
+
+	b)	0xFFFE0000 = 1111 1111 1111 1110 0000 0000 0000 0000, por lo que
+		PDI = 0x3FF, PTE = 0x3E0, offset = 0x0.
+		Entonces la direccion fisica es a la que apunta la direccion virtual
+		0x3E0 concatenada con 0x0 del offset.
+
+	c)	0xFFFFF000 = 1111 1111 1111 1111 1111 0000 0000 0000, por lo que
+		PDI = 0x3FF, PTE = 3FF, offset = 0x0.
+		Entonces la direccion fisica es la ultima entrada del page directory.
+
+	d) 	Este esquema de memoria virtual donde la ultima entrada apunta a la
+		base del page directory, sirve para tener una tabla recursiva.
+
+19)	a)	El puntero NULL apunta a la direccion virtual 0 que no esta mapeada
+		a memoria fisica, por lo que al intentar acceder se genera una
+		excepcion.
+	b)	El SO mapea paginas no usadas en memoria fisica a un archivo de swap,
+		esto libera memoria fisica.
+	c)	Esto es cuando las paginas de un programa no se cargan en memoria
+		fisica hasta que el programa intente acceder a ellas.
+	d)	El SO puede mapear paginas adicionales para el stack si una operacion
+		desborda el tamaño actual, lo que hace crecer el segmento.
+	e)	Se prohibe la ejecucion de codigo desde el stack para evitar
+		desbordamiento de buffer.
+	f)	Permite mapear archivos directeamente al espacio de direcciones 
+		virtuales.
+	g)	Los procesos padre e hijo comparten paginas, si uno intenta modificar
+		una pagina se crea una copia privada de esa pagina especifica.
+	h)	El SO reserva grandes bloques de memoria fisica solo cuando es
+		necesario.
+	i)	El SO optimiza calloc mapeando paginas inicializadas con ceros.
+	j)	Librerias compartidas entre procesos pueden ser mapeadas en memoria 
+		fisica y accedidas desde multiples memorias virtuales de diferentes
+		procesos.
+	k)	Se pueden mapear paginas fisicas a diferentes direcciones virtuales de
+		diferentes procesos para permitir comunicación.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
