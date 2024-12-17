@@ -1,0 +1,353 @@
+1)	a)	Puede tomar 1, 2, 3, 4.
+	b)	Sea P0:ABC, P1:12, P3:abc las lineas de cada proceso.
+		
+		Hay race conditions, que son cuando el mismo programa da diferentes
+		resultados cada vez que se ejecuta.
+		
+		ABC 12 abc = abc 12 ABC = ABC abc 12 = 4 y todas las combinaciones que
+		tengan ABC, abc y 12 juntos daran 4.
+		AB 12 abc C = 1 y todas las combinaciones que tengan AXXXXXC daran 1.
+		1 AB 2 abc C = 1 ab ABC 2 c = 2 y combinaciones del estilo daran 2.
+		12 AB abc C = 3 y combinaciones del estilo daran 3.
+	c)	hay (3+2+3)! / (3!*2!*3!) = 560 escenarios de ejecucion.
+
+2)	a)	No termina ya que los dos procesos tienen un loop infinito, de todas
+		formas el scheduler cambiara la ejecicion entre los dos procesos.
+	b)	x puede tomar los valores 0, 1 y 2.
+
+3)	a)	x = 1, 2, 4, 8, 16, 32, 64
+		y = 4
+	b)	Si se hace el cambio de la instruccion de P1, a pesar de ser lo mismo,
+		se dan mas resultados finales para x, pero y sigue teniendo el mismo
+		valor final de 4. Esto porque se los context switches pueden hacer que
+		'y' tenga valores intermedio de 2,3,4. Cuando antes solo tenia 2,4.
+
+4)	a)	El maximo posible de n es 200 y el de m es 200
+	b)	El minimo de iteraciones es 7 aprox, donde primero se le suma 1 a n
+		seguido de 7 iteraciones de n*2 hasta llegar a 128 donde terminan los
+		dos ciclos.
+
+		El maximo de iteraciones es infinito, ya que se pueden sumar y sumar
+		iteraciones si n se queda lo maximo posible en cero, hasta que se le
+		sume uno por primera vez. Que esto podria nunca pasar.
+	c)	n y m pueden tomar valores del intervalo [100,200], porque siempre
+		m va a ser igual a n, y el ciclo termina cuando n alcanza el valor 100.
+		Y su maximo se alcanza en el caso donde se tenga en P1: n = 100,
+		termina su ciclo por ser mayor a 100, pero al ya estar adentro del
+		ciclo de P0, se multiplica por 2, quedando n = 200.
+		Esos son los dos casos borde.
+
+5)	Para que vuelva a devolver los mismos valores del punto a), podemos hacer:
+
+	P0:	while(cont && x<20) {			P1:	aquire(&lock);
+			x = x * y;						y = y + 1;
+		}									y = y + 1;
+											realese(&lock);
+											cont = false;
+
+6)	Supongamos que tenemos:
+	0:	init(mutex);		{Solo se corre una vez}
+	A:	...
+	B:	lock(&mutex);
+	C:	(seccion critica)
+	D:	unlock(&mutex);
+	F:	...
+
+	Y los procesos P0 y P1 que intentan acceder a la seccion critica.
+	
+	P0: 0,2,3,4,	{init()}
+		A,
+		B,7,		{context switch a P1, salio del bucle porque mutex->flag
+					 != 1}
+	P1:	A,
+		B,7,8,9,10,	{No entra al bucle porque mutex->flag != 1,mutex->flag = 1}
+		C,			{Entra a la seccion critica, sucede un context switch a P0}
+	
+	P0: 9,10,		{mutex->flag = 1}
+		C,			{Los dos procesos se encuentran en la seccion critica}
+		D,12,13,14,	{mutex->flag = 0}
+		F,			{context switch a P1}
+
+	P1:	D,12,13,14,	{mutex->flag = 0, otra vez}
+		F,
+
+7)	
+CLI/STI:	
+	Utiliza instrucciones de ensablador CLI y STI para habilitar y deshabilitar
+	las interrupciones del procesador.
+Simple Flag:
+	Utiliza una flag/variable (cero ó uno) para indicar si un proceso tomo ó no
+	tomo un lock.
+Test-and-set: (TAS)
+	Utiliza una instruccion atomica para estableder un lock.
+Dekker y Peterson:
+	Utiliza loads y stores, simplemente asegurando que dos threads nunca entren
+	a una seccion critica al mismo tiempo.
+Compare-and-Swap: (CAS)
+	Utiliza una operacion atomica que compara y actualiza un valor solo si
+	cumple una condicion.
+Load-Linked/Store-Conditional: (LL-SC)
+	Implementa exclusion mutua con operaciones atomicas avanzadas que evitan
+	problemas de contencion de sistemas multicore.
+Fetch-and-Add:
+	Incrementa un contador y devuelve su valor previo de manera atomica.
+Test-and-Set con Yield:
+	Incluye yield(), cediendo la CPU cuando el lock esta ocupado, para mejorar
+	el rendimiento al reducir la espera ocupada.
+Test-and-Set con Park:
+	Utiliza park() para suspender al hilo si no puede adquirir el lock, 
+	eliminando la espera ocupada y mejorando la eficiencia de sistemas
+	multitarea.
+
+Algoritmo|Correcto|Justo|Desempeño|EsperaOcupada|HW|Multicore|MasDe2Procesos
+CLI/STI	 |Si	  |No	|Bajo	  |No			|Si|No		 |No
+SimplFlag|No	  |No	|Regular  |Si			|No|No		 |No
+Test&Set |Si	  |No	|Regular  |Si			|Si|Si		 |Si
+Dekker	 |Si	  |Si	|Regular  |Si			|No|No		 |No
+Peterson |Si	  |Si	|Regular  |Si			|No|No		 |No
+Com&Swap |Si	  |No	|Bueno	  |Si			|Si|Si		 |Si
+LL-SC	 |Si	  |No	|Bueno	  |Si			|Si|Si		 |Si
+Fetch&Add|Si	  |No	|Regular  |Si			|Si|Si		 |Si
+TAS,Yield|Si	  |No	|Mejor	  |No			|Si|Si		 |Si
+TAS,Park |Si	  |No	|Bueno	  |No			|Si|Si		 |Si
+
+8)	P0:	1: 	while (1) {
+		2:	{Región no crítica}
+		3:	(c0,t) = (true,1)
+		4:	while (t!=0 && c1);
+		5:	{Región crítica}
+		6:	c0 = false
+		7: 	}
+
+	P1:	A:	while (1) {
+		B:	{Región no crítica}
+		C:	(c1,t) = (true,0)
+		D:	while (t!=1 && c0);
+		E:	{Región crítica}
+		F:	c1 = false
+		G: 	}
+
+	El orden correcto seria: 
+		P0: c0=true; t=1;
+		P1:	c1=true; t=0;
+	Tambien podria ser:
+		P0: t=1; c0=true;
+		P1: t=0; c1=true;
+	No podrian ser los otros dos casos:
+		P0: c0=true; t=1;
+		P1:	t=0; c1=true;
+	
+		P0: t=1; c0=true;
+		P1:	c1=true; t=0;
+
+9)	Teniendo un productor P1 y dos consumidores C1, C2:
+	Supongamos quese ejecuta: 
+	C1: 17,18,19,20,21,22 	{Frenando a esperar que se llene el buffer, Context
+							 Switch a P1}
+	P1: 5,6,7,8,9,11,12,
+		13,14,7,8,9,10		{Frenando a esperar que se vacie el buffer, Avisa
+							que esta lleno, context switch C2}
+	C2: 17,18,19,20,21,23,
+		24,25,...,22		{Frena a esperar que se llene el buffer, consumio
+							 el buffer, context switch C1}
+	C1:	23					{Se desperto por la señal de que esta lleno el
+							 Buffer, pero al llegar a 23, esta vacio y explota}
+
+10)	a)	sem s1,s2,s3;
+		sem_init(s1,0);
+		sem_init(s2,0);
+		sem_init(s3,0);
+		A{sem_up(s1)};
+		B{sem_down(s1);sem_up(s2)};
+		C{sem_down(s2);sem_up(s3)};
+		D{sem_up(s3)};
+
+	b)	sem s1,s2;
+		sem_init(s1,0);
+		sem_init(s2,0);
+		A{sem_up(s1)};
+		B{sem_down(s1)};
+		C{sem_up(s2)};
+		D{sem_down(s2)};
+
+	c)	sem s1,s2,s3;
+		sem_init(s1,0);
+		sem_init(s2,0);
+		sem_init(s3,0);
+		A{sem_up(s1);sem_up(s2)};
+		B{sem_down(s1);sem_up(s3)};
+		C{sem_down(s2);sem_up(s3)};
+		D{sem_down(s3);sem_down(s3)};
+
+	d)	sem s;
+		sem_init(s,0)
+		A{sem_up(s)};
+		B{sem_up(s)};
+		C{sem_up(s)};
+		D{sem_down(s);sem_down(s);sem_down(s)};
+
+11)	a)	sem s1, s2, mutex;
+		sem_init(s1,0);
+		sem_init(s2,0);
+		sem_init(mutex, 1);
+		
+		P0:	sem_up(s2);
+			sem_down(mutex);
+			a0 = x;
+			sem_down(s1);
+			sem_down(s1);
+			a0 = a0 + 1;
+			x = a0;
+			sem_up(mutex);
+
+		P1:	sem_down(s2);
+			sem_down(mutex);
+			x = x + 1;
+			x = x + 1;
+			sem_up(mutex);
+			sem_up(s1);
+
+		P2: sem_down(mutex);
+			a2 = x;
+			a2 = a2 + 1;
+			sem_down(s2);
+			x = a2;
+			sem_up(mutex);
+			sem_up(s1);
+
+		De esta forma, se asegura que el resultado final de x siempre sea 1.
+
+	b)	sem s0, s1;
+		sem_init(s0,1);
+		sem_init(s1,0);
+
+
+		P0: while (n<100) {
+				sem_down(s0);
+				n = n * 2;
+				m = n;
+				sem_up(s1);
+			}	
+		
+		P1: while (n<100) {
+				sem_down(s1);
+				n = n + 1;
+				m = n;
+				sem_up(s0);
+			}
+		
+		Los valores finales de n = 100 y m = 100.
+
+12)	Caso (E,F) = (0,0)
+	Al estar inicializados los dos semaforos en cero, se llega a un deadlock.
+	Porque supongamos que primer va hacia ping(), al llegar al sem_wait(empty)
+	se duerme el proceso porque el semaforo paso a ser -1, se sigue con pong()
+	donde al llegar a sem_wait(full) sucede lo mismo, pasa a ser -1 y se duerme
+	el proceso. Asi quedando pendiente los procesos de que el otro termine,
+	pero estando los dos dormidos.
+
+	Caso (E,F) = (0,1)
+	En este caso se escribe Pong seguido de Ping seguido de Pong y de Ping,
+	sucesivamente, el semaforo funciona pero no se muestra Ping Pong, sino Pong
+	Ping. 
+	Supongamos que accede primero a ping(), al llegar a sem_wait(empty), se 
+	duerme el proceso. Y sigue con pong(), al llegar a sem_wait(full), este 
+	decrece a cero por lo que entra a la zona critica, escribiendo Pong,
+	incrementa sem_up(empty) por lo que se libera el proceso en Ping(), 
+	escribiendo Ping, y habilitando que se escriba Pong nuevamente y asi 
+	hasta completar el numero de loops.
+
+	Caso (E,F) = (1,0)
+	En este caso se escribe Ping seguido de Pong, el semaforo funciona bien y 
+	se muestra en pantalla Ping Pong. Hace la misma logica que el caso anterior
+	pero "invertido".
+
+	Caso (EF) = (1,1)
+	En este caso se rompe la concurrencia, ya que se ejecutan en cualquier
+	orden, llegandose a ver Ping Ping Pong Pong ó permutaciones de ese estilo.
+	Inclusive sobreposiciones de las palabras como PinPongg.
+
+13)	Implementa la version de semaphores del libro ostep, llamada zemaphores.
+	La diferencia con los semaphores, es que se usa un solo lock y una sola
+	variable condicional mas una variable de estado para trakear el valor del
+	semaphore. Tambien se diferencia en que no mantiene la invariante de que 
+	el valor del semaphore, cuando es negativa, no reflecta el numero de
+	threads esperando, sino que el valor nunca sera menor a cero.
+
+14)	a)	P0: lock(printer)
+		P1: {se duerme en el lock(printer)}
+		P2:	lock(cd)
+		P0: lock(disk)
+		P2: {se duerme en el lock(printer)}
+
+	b)	sem printer, disk, cd;
+		sem_init(printer,1);
+		sem_init(disk,1);
+		sem_init(cd,1);
+
+		P0:	sem_down(printer);
+			sem_down(disk);
+			sem_up(disk);
+			sem_up(printer);
+
+		P1:	sem_down(printer);
+    		sem_up(printer);
+    		sem_down(cd);
+    		sem_down(disk);
+    		sem_up(disk);
+   	 		sem_up(cd);
+		
+		P2:	sem_down(cd);
+    		sem_up(cd);
+    		sem_down(printer);
+    		sem_down(disk);
+    		sem_down(cd);
+    		sem_up(cd);
+    		sem_up(disk);
+    		sem_up(printer);
+
+	c)	P0: Queda igual
+		
+		P1:	sem_down(printer)
+			sem_up(printer)
+			sem_down(disk)
+			sem_down(cd)
+			sem_up(cd)
+			sem_up(disk)
+
+		P2:	sem_down(printer)
+			sem_down(disk)
+			sem_down(cd)
+			sem_up(cd)
+			sem_up(disk)
+			sem_up(printer)
+
+15)	Bajo este contexto puede haber deadlock, ya que al matar un proceso no se
+	vuelve a aumentar el semaforo. Pero supongamos que si se mata un proceso
+	se aumenta el semaforo, entonces bajo esta condicion en algun momento se
+	mataria el proceso que causa el deadlock, destrabando todo.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
