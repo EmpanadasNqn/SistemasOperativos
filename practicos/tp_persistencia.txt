@@ -1,0 +1,243 @@
+1)	- 8TiB = 2^43Bytes
+	- Interfaz SAS
+	- 7200RPM
+	- 4.16ms latencia de busqueda/seek time
+	- 215MiB/s tasa de transferencia
+
+	a)	Da 7200 vueltas por minuto.
+		Un minuto = 60 segundos = 60.000 ms.
+
+		Entonces da una vuelta cada 60000/7200 = 8.33ms.
+	
+	b)	Trotation es el promedio/tasa de rotacion. Osea de tener el dato
+		enseguida o tener que esperar toda una vuelta. (0ms + 8.33ms)/2.
+		Trotation = 8.33ms/2 = 4.16ms
+
+		Ttransfer es cuanto tarda en transferir un bloque de xKiB por ejemplo.
+		Diferente a la TASA de transferencia que es 
+		215MiB/s = 215*(2^20)bytes/s = 225443840bytes/s.
+		Ttransfer = (4096bytes)/(225443840bytes/s) = 0.000181s * 1000ms =
+		Ttransfer = 0.0181ms
+
+		Ti/o = Tseek + Trotation + Ttransfer
+		Ti/o = 4.16ms+ 4.16ms    + 0.0181ms
+		Ti/o = 8.338ms 
+
+		Finalmente 
+		Ri/o = 4096Bytes / Ti/o = 4096Bytes / 0.008338s = 491244Bytes/s
+		Ri/o = 0.468MiB/s
+
+2)	Tamaño FAT para
+	
+	a)	FAT12 se pueden direccionar 2^12 = 4096 clusters/bloques
+		Cada cluster es de 512Bytes = 0.5KiB
+		Disket de 360KiB = 360 * 2^10
+		
+		Entonces se necesitan (360 * 2^10) / 512 = 720 clusters
+		Cada cluster en FAT ocupa 12bits = 1.5Bytes, entonces toda la FAT ocupa
+		720 * 1.5bytes = 1080Bytes.
+
+	b)	FAT16 se pueden direccionar 2^16 = 65536 clusters, cada cluster ocupa
+		16bits = 2bytes.
+		Cluster de 4096Bytes.
+		Disco Duro de 4GiB = 4 * 2^30 = 2^32 = 4294967296bytes.
+
+		Se necesitan 2^32 / 4096 = 1048576 clusters. Entonces toda la FAT ocupa
+		1048576 * 2bytes = 2097152bytes = 2MiB
+
+	c)	FAT32 se pueden direccionar 2^32 clusters, cada cluster ocupa 4bytes.
+		Cluster de 16384bytes = 16KiB = 2^14.
+		Pendrive 32GiB = 2^5 * 2^30 = 2^35.
+
+		Se necesitan 2^35 / 2^14 = 2^(35-14) = 2^21 clusters. Entonces toda la
+		FAT ocupa 2^21 * 4 = 2^23 = 8MiB
+
+3)	El file system de xv6 es una estructura FFS con parametros:
+	bloque de 512bytes, 12 bloques directos, 1 bloque indirecto e indice de 
+	bloque de 32bits = 4bytes.
+
+	a)	Hay 512bytes / 4bytes = 128 bloques, por lo que el tamaño maximo de un
+		archivo es de 512bytes * (12 + 128) = 70KiB.
+
+	b)	Tenemos 128 * 4bytes = 512bytes es la sobrecarga para bloque indirecto.
+		12 * 4bytes = 48bytes es la sobrecarga para bloque directo.
+		Y 4bytes del puntero indirecto.
+
+		Por lo que la sobrecarga maxima es de 512bytes + 48bytes + 4bytes que
+		es 564bytes.
+
+	c)	Como tenemos 12 bloques directos, 128 indirectos y 1 bloque indirecto
+		con los punteros. Con un total de 141 bloques utilizados.
+		Para codificar los numeros de los bloques necesitamos log2(141)=7.1395
+		como minimo 8 bits. Esto reduciria la sobrecarga maxima a 141bytes.
+
+4)	Para un file system de xv6 con bloque de 512bytes, 12 bloques directos,
+	1 bloque indirecto e indice de bloque de 32bits.
+	
+	Por lo que los bloques directos abarcan 512*12=6144 bloques, [0,6143] y los
+	bloques indirectos abarcan 6144*12=73728???, [6144,73727].
+
+	a)	Para acceder al byte 451/512 = 0.8808, por lo que hay que leer el 
+		bloque 0.
+
+		Para acceder al byte 6200, primero calculamos con el puntero indirecto,
+		(byte-limiteInferior)/bloqueSize = (6200-(512*12)) / 512 =
+		(6200-6144)/512 = 56/512 = 0.1093, por lo que hay que leer el bloque 0.
+		Que es el bloque general 12.
+
+		Para acceder al byte 7100, calculamos (71000-6144)/512=126.67, por lo
+		que hay que leer el bloque 126. Que es el bloque general 138.
+
+	b)	Sea x (un natural) el byte que se quiere acceder, sea D la cantidad de
+		bloques directos y sea s el tamaño en bytes de cada cluster. 
+		La formula queda:
+
+		x / s 			cuando x < s*D	Ó	
+		(x - s*D) / s	cuando x >= s*D
+
+5)	Disco Duro de 16TiB = 2^44 con bloques de 4KiB = 2^12 e indice de bloque
+	de 32bits = 4bytes.
+	Supongamos que el file system esta organizado con i-nodos de hasta 3
+	niveles de indireccion y hay 8 punteros a bloques directos.
+
+	Tenemos que cada bloque indirecto añade 4KiB/4bytes = 1024 punteros.
+
+	Entonces tenemos (8 + 1024 + 1024^2 + 1024^3) * 4KiB = 4TiB es el tamaño
+	maximo de archivo soportado por este file system.
+
+6)	Al estar usando el file systems de xv6, que tiene bloques de 512bytes, 12
+	bloques directos y 1 indirecto con un indice de bloque 32bits = 4bytes.
+
+	a)	Al crearse el archivo nuevo de 6000bytes, entra en los bloques
+		apuntados por los bloques directos. ya que los bloques directos
+		apuntan a los bytes entre [0,6143]. Usando especificamente
+		6000/512 = 11.7 ~ entonces usando los 12 bloques apuntados.
+		
+	b)	Al agregarse 1000bytes mas, tenemos que sobran 6144-6000 = 144bytes de
+		los bloques directos. Entonces hay que guardar 1000-144 = 856bytes con
+		los bloques indirectos. Por lo que 856/512 = 1.68 se usan 2 bloques
+		de los bloques apuntados indirectamente.
+
+7)	Se inicia alguno de los metodos de recuperacion, ya sea usando fsck,
+	journaling u algun otro metodo intermedio. Se analiza si a partir de los
+	logs se puede determinar que bloques tenian datos de usuario y no basura.
+	Mirando especificamente a donde apuntan los punteros en los inodos.
+
+8)	Hay errores, que resultan inportantes porque son los siguientes casos:
+
+	In use: 0 y Free: 0, significando que el bloque no esta en uso pero no se
+	marco como liberado, no genera un error importante a menos que el bit de 
+	In use no se haya activado correctamente, lo que dejaria en duda si tiene
+	datos de usuario o basura. Lo cual si es un error importante.
+
+	In use: 1 y Free: 1, significando que el bloque tiene datos de usuario pero
+	se libero. Lo cual es un error importante ya que en teoria se perdieron
+	los datos.
+
+	In use: 1 y Free: 0, no es un error porque significa que el bloque esta en
+	uso, por lo tanto no esta liberado.
+
+	In use: 0 y Free: 1, no es un error porque significa que el bloque no esta
+	en uso y esta liberado.
+
+9)	a)	/initrd.img, la secuencia de lectura es:
+
+		root inode	|	initrd.img inode	|	root data	|	initrd.img data
+			READ
+													READ
+								READ
+																		READ
+		Resumido es: 
+		root inode -> root data -> initrd.img inode -> initrd.img data
+					
+		
+
+	b)	/usr/games/moon-buggy, la secuencia de lectura es:
+
+		root inode | usr inode | games inode | moon-buggy inode | root data | usr data | games data | moon-buggy data
+			READ
+																	READ
+						READ													READ
+									READ													READ
+													READ
+																											READ
+
+	Resumido es:
+	root inode -> root data -> usr inode -> usr data -> games inode -> 
+	games data -> moon-buggy inode -> moon-buggy data
+
+10)	Al utilizar contenido del archivo en el inodo estamos reduciendo la
+	cantidad de punteros que puede tener el inodo, por lo tanto el archivo en
+	si tendria menos espacio para usar.
+
+11)	Se utiliza para no tener que recorrer el grafo de directorios para saber
+	cuantos nombres de archivos se linkearon a este inodo, y su funcionalidad
+	mas importante es para corroborar que se puede liberar la memoria del inodo
+	solo cuando este link count es cero, ya que nos asegura que nada apunta al
+	inodo.
+
+12)	a)	Las pruebas de consistencia son: Validacion de la FAT; Coherencia entre
+		directorios y la FAT; Entradas de directorio; Espacio libre; Integridad
+		de la estructura del sistema de archivos.
+
+	b)	Las pruebas de consistencia son: Consistencia de Inodos; Coherencia
+		entre directorios e Inodos; Integridad de los mapas de bits (bitmaps);
+		Estructura de directorios; Bloques de datos; Superbloque y estructuras
+		criticas.
+
+13)	No se pueden realizar hard links entre directorios porque se podrian
+	generar bucles de links. Si dir1 fuera un hardlink de dir2, y dir2 un hard
+	link de dir1, se generaria un bucle infinito al intentar acceder a ellos.
+
+14)	Log-filesystem es cuando se lleva a cabo un registro de que hace el file
+	system, donde almacena tal cosa, cuantos bloques, el Inodo, etc. Su
+	problema es que al tambien tener que almacenar el log en disco, al suceder
+	un crash del sistema, lo que dice que sucedio el log no siempre coincide
+	con lo que realmente se logro almacenar en el disco, ya sea porque se logro
+	guardar el log y no los datos en el disco o lo contrario, que se haya
+	guardado los datos y no el log en el disco.
+
+	journaling-filesystem es una mejora del log-filesystem porque se almacena
+	en un registro todos los movimientos que realizo el filesystem pero con un
+	formato especial para verificar que no sucedan los dos problemas descriptos
+	anteriormente. Especificamente se almacena en el journal algo como:
+	[TxB,Bitmap de Inodo,Bitmap de Datos,Datos,TxE] En el caso del journaling
+	filesystem donde se hace una copia de los datos en el journal. 
+	Especificamente significa: TxB el comienzo del movimiento que se va hacer,
+	bitmaps son las copias exactas de los bitmaps, el dato solo en este formato
+	de journaling y TxE la finalizacion del movimiento que se va a realiza,
+	este TxE que es un 'final de linea' se aplica al journal solo una vez que
+	se pasaron los bitmaps y el dato al disco, y no antes para no generar
+	inconsistencia en el disco.
+
+15)	Las tres capas son: Capa bloques, Capa Logica, Capa Inodos.
+	Supongamos que tenemos que almacenar un archivo, este archivo va a tener
+	un Inodo con metadata del mismo, va a estar distrubuido en bloques y va a 
+	ser facil de encontrar por la logica de los bitmaps.
+
+16)	a)	Verdadero, la DMA se termina encargando de realizar la copia de los
+		datos de memoria al disco, avisando cuando se completa. Para que la CPU
+		pueda seguir ejecutando otros programas. Evitando el pooling.
+	b)	Falso, en UNIX todo es un archivo.
+	c)	Falso, para eso se utilizan los soft links.
+	d)	Verdadero.
+	e)	Verdadero, sufre de fragmentacion interna.
+	f)	Verdadero, calculandolo a partir de los bloques ocupado no va a dar una
+		medicion del archivo exacta, porque los bloques son de tamaño fijo. 
+		Pero igual se puede hacer. En FAT no es necesario pero en UFS si.
+	g)	Falso, por ejemplo con un bloque con todos ceros.
+	h)	Falso, puede suceder que los datos no se sobreescriban inmediatamente.
+		Solo habria que descubrir en que bloques estaba (recuperar el inodo).
+	i)	Falso.
+	j)	Falso.
+	k)	Verdadero, tambien sirve para aumentar el tamaño de un archivo.
+
+17)	Tener un bitmap de Inodos libres mejora la eficiendia de busqueda de
+	espacios libres, es mas simple saber si esta libre o no un sector y
+	esta concentrada la informacion de los espacios libres.
+	Pero la informacion queda fragmentada y se ocupa espacio adicional para
+	el bitmap, dejando menos para datos.
+
+18)	Se podria almacenar rangos de bloques contiguos y mejorar el ordenamiento 
+	inicial de asignaciones de bloques.
+
